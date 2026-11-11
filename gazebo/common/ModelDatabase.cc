@@ -23,6 +23,9 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <iostream>
+#include <iomanip>
+#include <sstream>
+#include <ctime>
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/bind/bind.hpp>
@@ -45,7 +48,14 @@
 using namespace gazebo;
 using namespace common;
 
-ModelDatabase *ModelDatabase::myself = ModelDatabase::Instance();
+std::string GetTimeString()
+{
+  time_t now = time(nullptr);
+  struct tm *ptm = localtime(&now);
+  char buffer[16];
+  strftime(buffer, sizeof(buffer), "%H:%M:%S", ptm);
+  return std::string(buffer);
+}
 
 /////////////////////////////////////////////////
 size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream)
@@ -338,7 +348,7 @@ std::map<std::string, std::string> ModelDatabase::GetModels()
     return this->dataPtr->modelCache;
   else
   {
-    gzwarn << "Getting models from[" << GetURI()
+    gzwarn << "[" << GetTimeString() << "] Getting models from[" << GetURI()
            << "]. This may take a few seconds.\n";
 
     boost::mutex::scoped_lock lock(this->dataPtr->updateMutex);
@@ -436,6 +446,8 @@ std::string ModelDatabase::GetModelPath(const std::string &_uri,
       suffix = modelName.substr(endIndex, std::string::npos);
 
     modelName = modelName.substr(startIndex, modelNameLen);
+
+     gzmsg << "[" << GetTimeString() << "] Getting model[" << modelName << "] from online database.\n";
 
     // Store downloaded .tar.gz and intermediate .tar files in temp location
     boost::filesystem::path tmppath = boost::filesystem::temp_directory_path();
@@ -536,6 +548,10 @@ std::string ModelDatabase::GetModelPath(const std::string &_uri,
         << "The model may be corrupt.\n";
       path.clear();
     }
+      else
+      {
+        gzmsg << "[" << GetTimeString() << "] Finished getting model[" << modelName << "].\n";
+      }
 
     // Clean up
     try
